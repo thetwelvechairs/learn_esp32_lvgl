@@ -15,16 +15,12 @@ Required drivers
 
 ### PlatformIO Dependencies
 
-* adafruit/Adafruit NeoPixel@^1.10.5
-* fdivitto/FabGL@^1.0.8
+* lvgl@^8.3.1
+* bodmer/TFT_eSPI@^2.4.75
 
 ### Custom configs
 
-* in TFTControllerGeneric.cpp:
-```#define TFT_SPI_WRITE_FREQUENCY 27000000```
+* lv_conf.h to be copied into root of your lvgl folder
 
    
-* in fabglconf.h:
-```#define TFT_170x320 "\"TFT_172x320\" 172 320"```
-and 
-```m_rotOffsetY = 34;```
+* User_Setup.h to be copied into root of your TFT_eSPI folder
