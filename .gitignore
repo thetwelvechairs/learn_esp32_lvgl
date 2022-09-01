@@ -1,6 +1,8 @@
 .idea
 .pio
-CMakeListsPrivate.txt
-cmake-build-*/ 
+.vscode
+cmake-build-*/
+build
 CMakeLists.txt
+CMakeListsPrivate.txt
 *.log
