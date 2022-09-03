@@ -5,8 +5,7 @@ platformio -c clion run --target upload -e adafruit_feather_esp32_v2
 ````
 
 Hardware
-* Adafruit ESP32 Feather V2
-* Adafruit 1.9" 320x170 Color IPS TFT Display - ST7789
+* Adafruit ESP32-S3 TFT Feather
 
 Required drivers
 
@@ -17,6 +16,7 @@ Required drivers
 
 * lvgl@^8.3.1
 * bodmer/TFT_eSPI@^2.4.75
+* adafruit/Adafruit NeoPixel@^1.10.5
 
 ### Custom configs
 
