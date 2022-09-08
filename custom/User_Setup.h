@@ -7,8 +7,8 @@
 // ##################################################################################
 
 #define ST7789_DRIVER      // Full configuration option, define additional parameters below for this display
-#define TFT_WIDTH  135
-#define TFT_HEIGHT 240
+#define TFT_WIDTH  240
+#define TFT_HEIGHT 135
 
 
 // ##################################################################################
