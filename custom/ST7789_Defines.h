@@ -1,47 +1,53 @@
 // Change the width and height if required (defined in portrait mode)
 // or use the constructor to over-ride defaults
 #ifndef TFT_WIDTH
-  #define TFT_WIDTH  240
+#define TFT_WIDTH  240
 #endif
 #ifndef TFT_HEIGHT
-  #define TFT_HEIGHT 135
+#define TFT_HEIGHT 135
 #endif
 
 #if (TFT_HEIGHT == 240) && (TFT_WIDTH == 240)
-  #ifndef CGRAM_OFFSET
+#ifndef CGRAM_OFFSET
     #define CGRAM_OFFSET
   #endif
 #endif
 
 // Adafruit 1.44 TFT support
 #if (TFT_HEIGHT == 240) && (TFT_WIDTH == 135)
-  #ifndef CGRAM_OFFSET
+#ifndef CGRAM_OFFSET
     #define CGRAM_OFFSET
   #endif
 #endif
 
 // Adafruit 1.69 round corner TFT support
 #if (TFT_HEIGHT == 280) && (TFT_WIDTH == 240)
-  #ifndef CGRAM_OFFSET
+#ifndef CGRAM_OFFSET
     #define CGRAM_OFFSET
   #endif
 #endif
 
 // 1.47" 172x320 Round Rectangle Color IPS TFT Display
 #if (TFT_HEIGHT == 320) && (TFT_WIDTH == 172)
-  #ifndef CGRAM_OFFSET
+#ifndef CGRAM_OFFSET
     #define CGRAM_OFFSET
   #endif
 #endif
 
 #if (TFT_HEIGHT == 320) && (TFT_WIDTH == 170)
-  #ifndef CGRAM_OFFSET
+#ifndef CGRAM_OFFSET
+    #define CGRAM_OFFSET
+  #endif
+#endif
+
+#if (TFT_HEIGHT == 170) && (TFT_WIDTH == 320)
+#ifndef CGRAM_OFFSET
     #define CGRAM_OFFSET
   #endif
 #endif
 
 #if (TFT_HEIGHT == 300) && (TFT_WIDTH == 240)
-  #ifndef CGRAM_OFFSET
+#ifndef CGRAM_OFFSET
     #define CGRAM_OFFSET
   #endif
 #endif
@@ -81,17 +87,17 @@
 #define TFT_MAD_GS  0x01
 
 #ifdef TFT_RGB_ORDER
-  #if (TFT_RGB_ORDER == 1)
+#if (TFT_RGB_ORDER == 1)
     #define TFT_MAD_COLOR_ORDER TFT_MAD_RGB
   #else
     #define TFT_MAD_COLOR_ORDER TFT_MAD_BGR
   #endif
 #else
-  #ifdef CGRAM_OFFSET
-    #define TFT_MAD_COLOR_ORDER TFT_MAD_BGR
-  #else
-    #define TFT_MAD_COLOR_ORDER TFT_MAD_RGB
-  #endif
+#ifdef CGRAM_OFFSET
+#define TFT_MAD_COLOR_ORDER TFT_MAD_BGR
+#else
+#define TFT_MAD_COLOR_ORDER TFT_MAD_RGB
+#endif
 #endif
 
 #define TFT_IDXRD   0x00 // ILI9341 only, indexed control register read

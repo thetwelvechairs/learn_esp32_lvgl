@@ -7,8 +7,8 @@
 
 #include <Adafruit_NeoPixel.h>
 
-#define TFT_WIDTH       320
-#define TFT_HEIGHT      240
+//#define TFT_WIDTH       170
+//#define TFT_HEIGHT      320
 //TFT_MOSI 35
 //TFT_SCLK 36
 //TFT_CS   7
@@ -23,34 +23,25 @@ static lv_color_t buf[screenWidth * 10];
 
 TFT_eSPI tft = TFT_eSPI(screenWidth, screenHeight);
 
-static lv_style_t style_btn;
-static lv_style_t style_btn_pressed;
-
 const char ssid[] = "VOKAMISLINK";
 const char password[] = "RUDRAFTDODGER911";
-
-//-30 dBm	Amazing
-//-67 dBm	Very Good
-//-70 dBm	Okay
-//-80 dBm	Not Good
-//-90 dBm	Unusable
 
 WiFiServer server(80);
 
 // Variable to store the HTTP request
 String header;
 
-// Auxiliar variables to store the current output state
+// Auxiliary variables to store the current output state
 String output26State = "off";
 String output27State = "off";
 
-// Assign output variables to GPIO pins
-const int output26 = 26;
-const int output27 = 27;
-
 static long strength = 0;
-static char *strengthString;
 
+static lv_obj_t *wifi = nullptr;
+static lv_obj_t *label = nullptr;
+static lv_obj_t *arc = nullptr;
+
+static lv_style_t style_arc;
 
 void my_disp_flush(lv_disp_drv_t *disp, const lv_area_t *area, lv_color_t *color_p){
     uint32_t width = (area->x2 - area->x1 + 1);
@@ -64,106 +55,27 @@ void my_disp_flush(lv_disp_drv_t *disp, const lv_area_t *area, lv_color_t *color
     lv_disp_flush_ready(disp);
 }
 
-void lv_example_calendar_1(){
-    lv_obj_t  * calendar = lv_calendar_create(lv_scr_act());
-    lv_obj_set_size(calendar, 185, 185);
-    lv_obj_align(calendar, LV_ALIGN_CENTER, 0, 27);
-//    lv_obj_add_event_cb(calendar, event_handler, LV_EVENT_ALL, NULL);
-
-    lv_calendar_set_today_date(calendar, 2021, 02, 23);
-    lv_calendar_set_showed_date(calendar, 2021, 02);
-
-    /*Highlight a few days*/
-    static lv_calendar_date_t highlighted_days[3];       /*Only its pointer will be saved so should be static*/
-    highlighted_days[0].year = 2021;
-    highlighted_days[0].month = 02;
-    highlighted_days[0].day = 6;
-
-    highlighted_days[1].year = 2021;
-    highlighted_days[1].month = 02;
-    highlighted_days[1].day = 11;
-
-    highlighted_days[2].year = 2022;
-    highlighted_days[2].month = 02;
-    highlighted_days[2].day = 22;
-
-    lv_calendar_set_highlighted_dates(calendar, highlighted_days, 3);
-
-#if LV_USE_CALENDAR_HEADER_DROPDOWN
-    lv_calendar_header_dropdown_create(calendar);
-#elif LV_USE_CALENDAR_HEADER_ARROW
-    lv_calendar_header_arrow_create(calendar);
-#endif
-    lv_calendar_set_showed_date(calendar, 2021, 10);
-}
-
-void lv_example_checkbox_1(){
-    lv_obj_set_flex_flow(lv_scr_act(), LV_FLEX_FLOW_COLUMN);
-    lv_obj_set_flex_align(lv_scr_act(), LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER);
-
-    lv_obj_t * cb;
-    cb = lv_checkbox_create(lv_scr_act());
-    lv_checkbox_set_text(cb, "Apple");
-//    lv_obj_add_event_cb(cb, event_handler, LV_EVENT_ALL, NULL);
-
-    cb = lv_checkbox_create(lv_scr_act());
-    lv_checkbox_set_text(cb, "Banana");
-    lv_obj_add_state(cb, LV_STATE_CHECKED);
-//    lv_obj_add_event_cb(cb, event_handler, LV_EVENT_ALL, NULL);
-
-    cb = lv_checkbox_create(lv_scr_act());
-    lv_checkbox_set_text(cb, "Lemon");
-    lv_obj_add_state(cb, LV_STATE_DISABLED);
-//    lv_obj_add_event_cb(cb, event_handler, LV_EVENT_ALL, NULL);
-
-    cb = lv_checkbox_create(lv_scr_act());
-    lv_obj_add_state(cb, LV_STATE_CHECKED | LV_STATE_DISABLED);
-    lv_checkbox_set_text(cb, "Melon\nand a new line");
-//    lv_obj_add_event_cb(cb, event_handler, LV_EVENT_ALL, NULL);
-
-    lv_obj_update_layout(cb);
-}
-
-void lv_example_line_1(){
-    /*Create an array for the points of the line*/
-    static lv_point_t line_points[] = { {5, 5}, {70, 70}, {120, 10}, {180, 60}, {240, 10} };
-
-    /*Create style*/
-    static lv_style_t style_line;
-    lv_style_init(&style_line);
-    lv_style_set_line_width(&style_line, 8);
-    lv_style_set_line_color(&style_line, lv_palette_main(LV_PALETTE_BLUE));
-    lv_style_set_line_rounded(&style_line, true);
-
-    /*Create a line and apply the new style*/
-    lv_obj_t * line1;
-    line1 = lv_line_create(lv_scr_act());
-    lv_line_set_points(line1, line_points, 5);     /*Set the points*/
-    lv_obj_add_style(line1, &style_line, 0);
-    lv_obj_center(line1);
-}
-
-//static lv_obj_t *label;
-//void basic(){
-//    /* Create simple label */
-//    label = lv_label_create(lv_scr_act());
-//    lv_label_set_text(label, "");
-//    lv_obj_align(label, LV_ALIGN_CENTER, 0, 0);
-//}
-
-static lv_obj_t *label = nullptr;
-static lv_obj_t *bar1 = nullptr;
-void lv_example_bar_1(){
+void setupScreen(){
+    wifi = lv_label_create(lv_scr_act());
     label = lv_label_create(lv_scr_act());
-    bar1 = lv_bar_create(lv_scr_act());
+    arc = lv_arc_create(lv_scr_act());
 
-    lv_obj_set_size(bar1, 200, 20);
-    lv_obj_center(bar1);
+    lv_arc_set_end_angle(arc, 0);
+    lv_obj_set_size(arc, 80, 80);
+    lv_arc_set_range(arc, -90, -20);
+    lv_obj_remove_style(arc, nullptr, LV_PART_KNOB);
+    lv_style_init(&style_arc);
 
-    lv_label_set_text(label, "");
-    lv_obj_align(label, LV_ALIGN_CENTER, 0, 0);
+    static lv_style_t styleText;
+    lv_style_init(&styleText);
+    lv_style_set_text_font(&styleText, &lv_font_montserrat_20);
+    lv_obj_add_style(wifi, &styleText, 0);
+    lv_obj_add_style(label, &styleText, 0);
+
+    lv_obj_align(arc, LV_ALIGN_CENTER, 0, 0);
+    lv_obj_align(label, LV_ALIGN_CENTER, 0, 50);
+    lv_obj_align(wifi, LV_ALIGN_CENTER, 0, -54);
 }
-
 
 void printWifiStatus() {
     // print the SSID of the network you're attached to:
@@ -194,20 +106,20 @@ void initWiFi() {
 }
 
 void setup(){
+    pinMode(0, INPUT);
+
+//    pinMode(TFT_I2C_POWER, OUTPUT);
+//    digitalWrite(TFT_I2C_POWER, HIGH);
 //    pinMode(TFT_BACKLITE, OUTPUT);
 //    digitalWrite(TFT_BACKLITE, LOW);
-//    pinMode(TFT_I2C_POWER, OUTPUT);
-//    digitalWrite(TFT_I2C_POWER, LOW);
-
-    lv_init();
-
+//    delay(10);
     // initialize TFT
     tft.init();
+    tft.fillScreen(TFT_BLACK);
     tft.setRotation(1);
-    tft.fillRect(20, 20, screenWidth, screenHeight, TFT_BLACK);
+//    digitalWrite(TFT_BACKLITE, HIGH);
 
-    neopixelWrite(PIN_NEOPIXEL, 0, 1, 0);
-
+    lv_init();
     lv_disp_draw_buf_init(&draw_buf, buf, nullptr, screenWidth * 10);
 
     /*Initialize the display*/
@@ -220,30 +132,40 @@ void setup(){
     disp_drv.draw_buf = &draw_buf;
     lv_disp_drv_register(&disp_drv);
 
-
-//    lv_example_bar_3();
-    lv_example_bar_1();
-//    basic();
-//    lv_example_checkbox_1();
-
-    // Turn on TFT backlight
-    pinMode(TFT_BACKLITE, OUTPUT);
-    digitalWrite(TFT_BACKLITE, HIGH);
-    // Turn on TFT I2C power supply
-    pinMode(TFT_I2C_POWER, OUTPUT);
-    digitalWrite(TFT_I2C_POWER, HIGH);
+    setupScreen();
 
     initWiFi();
+    lv_label_set_text(wifi, WiFi.SSID().c_str());
 }
 
 void loop(){
-    if (strength != WiFi.RSSI()){
-        strength = WiFi.RSSI();
+    //-30 dBm	Amazing
+    //-67 dBm	Very Good
+    //-70 dBm	Okay
+    //-80 dBm	Not Good
+    //-90 dBm	Unusable
+    auto rssi = WiFi.RSSI();
+    if (strength != rssi){
+        strength = rssi;
         String myString = String(strength) + " dBm";
-        lv_bar_set_value(bar1, strength, LV_ANIM_ON);
+        lv_arc_set_value(arc, strength);
         lv_label_set_text(label, myString.c_str());
-        Serial.println(strength);
-        Serial.println(myString);
+        if (rssi > -40){
+            lv_style_set_arc_color(&style_arc, lv_color_make(0, 255, 0));
+        }
+        if (rssi < -40 && rssi > -60){
+            lv_style_set_arc_color(&style_arc, lv_color_make(64, 255, 0));
+        }
+        if (rssi < -60 && rssi > -70){
+            lv_style_set_arc_color(&style_arc, lv_color_make(191, 255, 0));
+        }
+        if (rssi < -70 && rssi > -80){
+            lv_style_set_arc_color(&style_arc, lv_color_make(255, 255, 0));
+        }
+        if (rssi < -80){
+            lv_style_set_arc_color(&style_arc, lv_color_make(255, 0, 0));
+        }
+//        lv_obj_add_style(arc, &style_arc, LV_PART_INDICATOR);
     }
 
     try {

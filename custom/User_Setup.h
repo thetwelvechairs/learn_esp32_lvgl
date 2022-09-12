@@ -7,8 +7,8 @@
 // ##################################################################################
 
 #define ST7789_DRIVER      // Full configuration option, define additional parameters below for this display
-#define TFT_WIDTH  240
-#define TFT_HEIGHT 135
+#define TFT_WIDTH  320
+#define TFT_HEIGHT 240
 
 
 // ##################################################################################
@@ -17,12 +17,12 @@
 //
 // ##################################################################################
 
-#define TFT_MOSI 35
-#define TFT_SCLK 36
-#define TFT_CS   7  // Chip select control pin
-#define TFT_DC   39  // Data Command control pin
-#define TFT_RST  40  // Set TFT_RST to -1 if display RESET is connected to ESP32 board RST
-#define TFT_BL   45
+#define TFT_SCLK 5
+#define TFT_MOSI 19
+#define TFT_CS   32  // Chip select control pin
+#define TFT_DC   33  // Data Command control pin
+#define TFT_RST  -1  // Set TFT_RST to -1 if display RESET is connected to ESP32 board RST
+//#define TFT_BL   45
 
 
 // ##################################################################################
@@ -50,6 +50,11 @@
 // Section 4. Other options
 //
 // ##################################################################################
+
+// For ST7735, ST7789 and ILI9341 ONLY, define the colour order IF the blue and red are swapped on your display
+// Try ONE option at a time to find the correct colour order for your display
+
+#define TFT_RGB_ORDER TFT_BGR  // Colour order Blue-Green-Red
 
 #define SPI_FREQUENCY  27000000
 
