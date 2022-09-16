@@ -23,8 +23,8 @@ static lv_color_t buf[screenWidth * 10];
 
 TFT_eSPI tft = TFT_eSPI(screenWidth, screenHeight);
 
-const char ssid[] = "VOKAMISLINK";
-const char password[] = "RUDRAFTDODGER911";
+const char ssid[] = "";
+const char password[] = "";
 
 WiFiServer server(80);
 
