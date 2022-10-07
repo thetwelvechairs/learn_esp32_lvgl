@@ -1,4 +1,6 @@
 ````
+grep -rl adafruit_feather_esp32s3_tft . | xargs sed -i '' 's/adafruit_feather_esp32s3_tft/adafruit_feather_esp32_v2/g'
+
 platformio -c clion init --ide clion
 
 platformio -c clion run --target upload -e adafruit_feather_esp32_v2
@@ -14,13 +16,6 @@ Required drivers
 
 ### PlatformIO Dependencies
 
-* lvgl@^8.3.1
-* bodmer/TFT_eSPI@^2.4.75
-* adafruit/Adafruit NeoPixel@^1.10.5
+* lovyan03/LovyanGFX@^0.4.18
 
 ### Custom configs
-
-* lv_conf.h to be copied into root of your lvgl folder
-
-   
-* User_Setup.h to be copied into root of your TFT_eSPI folder

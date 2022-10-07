@@ -1,290 +1,180 @@
-#include <iostream>
-#include <lvgl.h>
-#include <SPI.h>
-#include <TFT_eSPI.h>
-
-#include <WiFi.h>
-
+#define LGFX_USE_V1
+#include <LovyanGFX.hpp>
 #include <Adafruit_NeoPixel.h>
+#include <random>
 
-//#define TFT_WIDTH       170
-//#define TFT_HEIGHT      320
-//TFT_MOSI 35
-//TFT_SCLK 36
-//TFT_CS   7
-//TFT_DC   39
-//TFT_RST  40
+class LGFX : public lgfx::LGFX_Device{
+    lgfx::Panel_ST7789  _panel_instance;
+    lgfx::Bus_SPI       _bus_instance;
 
-static const uint16_t screenWidth  = TFT_WIDTH;
-static const uint16_t screenHeight = TFT_HEIGHT;
+public:
+    LGFX(){
+        auto busCfg = _bus_instance.config();
+        auto panelCfg = _panel_instance.config();
 
-static lv_disp_draw_buf_t draw_buf;
-static lv_color_t buf[screenWidth * 10];
+        busCfg.freq_write = 27000000;
+        busCfg.pin_sclk = 5;
+        busCfg.pin_mosi = 19;
+        busCfg.pin_dc   = 33;
+        _bus_instance.config(busCfg);
+        _panel_instance.setBus(&_bus_instance);
 
-TFT_eSPI tft = TFT_eSPI(screenWidth, screenHeight);
+        panelCfg.pin_cs           =    32;
+        panelCfg.pin_rst          =    -1;
+        panelCfg.panel_width      =   240;
+        panelCfg.panel_height     =   320;
+        panelCfg.invert           =  true;
+        _panel_instance.config(panelCfg);
 
-const char ssid[] = "VOKAMISLINK";
-const char password[] = "RUDRAFTDODGER911";
-
-WiFiServer server(80);
-
-// Variable to store the HTTP request
-String header;
-
-// Auxiliary variables to store the current output state
-String output26State = "off";
-String output27State = "off";
-
-static long strength = 0;
-
-static lv_obj_t *wifi = nullptr;
-static lv_obj_t *label = nullptr;
-static lv_obj_t *arc = nullptr;
-
-static lv_style_t style_arc;
-
-void my_disp_flush(lv_disp_drv_t *disp, const lv_area_t *area, lv_color_t *color_p){
-    uint32_t width = (area->x2 - area->x1 + 1);
-    uint32_t height = (area->y2 - area->y1 + 1);
-
-    tft.startWrite();
-    tft.setAddrWindow(area->x1, area->y1, width, height);
-    tft.pushColors((uint16_t *) &color_p->full, width * height, true);
-    tft.endWrite();
-
-    lv_disp_flush_ready(disp);
-}
-
-void setupScreen(){
-    wifi = lv_label_create(lv_scr_act());
-    label = lv_label_create(lv_scr_act());
-    arc = lv_arc_create(lv_scr_act());
-
-    lv_arc_set_end_angle(arc, 0);
-    lv_obj_set_size(arc, 80, 80);
-    lv_arc_set_range(arc, -90, -20);
-    lv_obj_remove_style(arc, nullptr, LV_PART_KNOB);
-    lv_style_init(&style_arc);
-
-    static lv_style_t styleText;
-    lv_style_init(&styleText);
-    lv_style_set_text_font(&styleText, &lv_font_montserrat_20);
-    lv_obj_add_style(wifi, &styleText, 0);
-    lv_obj_add_style(label, &styleText, 0);
-
-    lv_obj_align(arc, LV_ALIGN_CENTER, 0, 0);
-    lv_obj_align(label, LV_ALIGN_CENTER, 0, 50);
-    lv_obj_align(wifi, LV_ALIGN_CENTER, 0, -54);
-}
-
-void printWifiStatus() {
-    // print the SSID of the network you're attached to:
-    Serial.print("SSID: ");
-    Serial.println(WiFi.SSID());
-
-    // print your board's IP address:
-    IPAddress ip = WiFi.localIP();
-    Serial.print("IP Address: ");
-    Serial.println(ip);
-
-    // print the received signal strength:
-    long rssi = WiFi.RSSI();
-    Serial.print("signal strength (RSSI): ");
-    Serial.print(rssi);
-    Serial.println(" dBm");
-}
-
-void initWiFi() {
-    WiFi.begin(ssid, password);
-    Serial.print("Connecting to WiFi...");
-    while (WiFi.status() != WL_CONNECTED) {
-        printWifiStatus();
-        delay(1000);
+        setPanel(&_panel_instance);
     }
-    Serial.println(WiFi.localIP());
-    server.begin();
+};
+
+#include <LGFX_TFT_eSPI.h>
+#include "Ball.h"
+#include "Flipper.h"
+
+static TFT_eSPI tft;
+
+static Ball ball;
+static Flipper flipperL;
+static Flipper flipperR;
+
+static TFT_eSprite buffer1(&tft);
+static TFT_eSprite buffer2(&tft);
+static TFT_eSprite *screenBuffers[2] = {&buffer1, &buffer2};
+
+static TFT_eSprite ballSprite;
+
+static const size_t frameCount = 2;
+
+static uint32_t sec, psec;
+static size_t fps = 0, frame_count = 0;
+
+static uint32_t display_width;
+static uint32_t display_height;
+
+std::vector<TFT_eSprite> sprites{4};
+
+void setupPixel(){
+    Adafruit_NeoPixel pixels(1, 0, NEO_GRB + NEO_KHZ800);
+    pixels.begin();
+    pixels.setPixelColor(0, 1, 0, 0);
+    pixels.show();
+}
+
+void frames(){
+    ++frame_count;
+    sec = lgfx::millis() / 1000;
+    if (psec != sec) {
+        psec = sec;
+        fps = frame_count;
+        frame_count = 0;
+    }
+}
+
+void drawTarget(int x, int y){
+    tft.drawLine(x-5, y-5, x+5, y+5, TFT_WHITE);
+    tft.drawLine(x-5, y+5, x+5, y-5, TFT_WHITE);
 }
 
 void setup(){
-    pinMode(0, INPUT);
+    try{
+        setupPixel();
 
-//    pinMode(TFT_I2C_POWER, OUTPUT);
-//    digitalWrite(TFT_I2C_POWER, HIGH);
-//    pinMode(TFT_BACKLITE, OUTPUT);
-//    digitalWrite(TFT_BACKLITE, LOW);
-//    delay(10);
-    // initialize TFT
-    tft.init();
-    tft.fillScreen(TFT_BLACK);
-    tft.setRotation(1);
-//    digitalWrite(TFT_BACKLITE, HIGH);
+        tft.init();
+        tft.setRotation(2);
+        tft.setColorDepth(16);
+        tft.setSwapBytes(true);
+        tft.fillScreen(TFT_ORANGE);
 
-    lv_init();
-    lv_disp_draw_buf_init(&draw_buf, buf, nullptr, screenWidth * 10);
+        display_width = tft.width();
+        display_height = tft.height();
 
-    /*Initialize the display*/
-    static lv_disp_drv_t disp_drv;
-    lv_disp_drv_init(&disp_drv);
-    /*Change the following line to your display resolution*/
-    disp_drv.hor_res = screenWidth;
-    disp_drv.ver_res = screenHeight;
-    disp_drv.flush_cb = my_disp_flush;
-    disp_drv.draw_buf = &draw_buf;
-    lv_disp_drv_register(&disp_drv);
+        tft.setPivot(0, 0);
 
-    setupScreen();
+        screenBuffers[0]->setColorDepth(tft.getColorDepth());
+        screenBuffers[0]->setFont(&fonts::Font2);
+        screenBuffers[0]->createSprite(display_width, display_height);
+        screenBuffers[1]->setColorDepth(tft.getColorDepth());
+        screenBuffers[1]->setFont(&fonts::Font2);
+        screenBuffers[1]->createSprite(display_width, display_height);
 
-    initWiFi();
-    lv_label_set_text(wifi, WiFi.SSID().c_str());
+        ballSprite.setSwapBytes(true);
+        ballSprite.createSprite(ball.width, ball.height);
+        ballSprite.pushImage(0, 0, ball.width, ball.height, ballBuffer);
+        ball.sprite = &ballSprite;
+        ball.display_width = display_width;
+        ball.display_height = display_height;
+
+        for (int n = 0; n < 4; n++) {
+            sprites.at(n).setSwapBytes(true);
+            sprites.at(n).createSprite(flipperL.width, flipperL.height);
+            auto temp = flipperLD;
+            switch (n) {
+                case 0:
+                    temp = flipperLD;
+                    break;
+                case 1:
+                    temp = flipperLU;
+                    break;
+                case 2:
+                    temp = flipperRD;
+                    break;
+                case 3:
+                    temp = flipperRU;
+                    break;
+                default:
+                    temp = flipperLD;
+                    break;
+            }
+
+            sprites.at(n).pushImage(0, 0, flipperL.width, flipperL.height, temp);
+        }
+
+        tft.startWrite();
+    }
+    catch (std::exception const &e){
+        tft.print(e.what());
+    }
 }
 
 void loop(){
-    //-30 dBm	Amazing
-    //-67 dBm	Very Good
-    //-70 dBm	Okay
-    //-80 dBm	Not Good
-    //-90 dBm	Unusable
-    auto rssi = WiFi.RSSI();
-    if (strength != rssi){
-        strength = rssi;
-        String myString = String(strength) + " dBm";
-        lv_arc_set_value(arc, strength);
-        lv_label_set_text(label, myString.c_str());
-        if (rssi > -40){
-            lv_style_set_arc_color(&style_arc, lv_color_make(0, 255, 0));
-        }
-        if (rssi < -40 && rssi > -60){
-            lv_style_set_arc_color(&style_arc, lv_color_make(64, 255, 0));
-        }
-        if (rssi < -60 && rssi > -70){
-            lv_style_set_arc_color(&style_arc, lv_color_make(191, 255, 0));
-        }
-        if (rssi < -70 && rssi > -80){
-            lv_style_set_arc_color(&style_arc, lv_color_make(255, 255, 0));
-        }
-        if (rssi < -80){
-            lv_style_set_arc_color(&style_arc, lv_color_make(255, 0, 0));
-        }
-//        lv_obj_add_style(arc, &style_arc, LV_PART_INDICATOR);
-    }
-
     try {
-        WiFiClient client = server.available();   // Listen for incoming clients
+        ball.Move();
 
-        if (client) {                             // If a new client connects,
-            Serial.println("New Client.");          // print a message out in the serial port
-            String currentLine = "";                // make a String to hold incoming data from the client
-            while (client.connected()) {            // loop while the client's connected
-                if (client.available()) {             // if there's bytes to read from the client,
-                    char c = client.read();             // read a byte, then
-                    Serial.write(c);                    // print it out the serial monitor
-                    header += c;
-                    if (c == '\n') {                    // if the byte is a newline character
-                        // if the current line is blank, you got two newline characters in a row.
-                        // that's the end of the client HTTP request, so send a response:
-                        if (currentLine.length() == 0) {
-                            // HTTP headers always start with a response code (e.g. HTTP/1.1 200 OK)
-                            // and a content-type so the client knows what's coming, then a blank line:
-                            client.println("HTTP/1.1 200 OK");
-                            client.println("Content-type:text/html");
-                            client.println("Connection: close");
-                            client.println();
+        screenBuffers[0]->clear();
+        drawTarget(display_width >> 1, (display_height >> 1) + (display_height >> 2));
+        drawTarget(display_width >> 1, display_height >> 1);
+        drawTarget(display_width >> 1, display_height >> 2);
 
-                            // turns the GPIOs on and off
-                            if (header.indexOf("GET /26/on") >= 0) {
-                                Serial.println("GPIO 26 on");
-                                neopixelWrite(PIN_NEOPIXEL, 0, 0, 100);
-                            } else if (header.indexOf("GET /26/off") >= 0) {
-                                Serial.println("GPIO 26 off");
-                                neopixelWrite(PIN_NEOPIXEL, 0, 0, 1);
-                            } else if (header.indexOf("GET /27/on") >= 0) {
-                                Serial.println("GPIO 27 on");
-                                neopixelWrite(PIN_NEOPIXEL, 100, 0, 0);
-                            } else if (header.indexOf("GET /27/off") >= 0) {
-                                Serial.println("GPIO 27 off");
-                                neopixelWrite(PIN_NEOPIXEL, 1, 0, 0);
-                            }
-                            // Display the HTML web page
-                            client.println("<!DOCTYPE html><html>");
-                            client.println(
-                                    "<head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">");
-                            client.println("<link rel=\"icon\" href=\"data:,\">");
-                            // CSS to style the on/off buttons
-                            // Feel free to change the background-color and font-size attributes to fit your preferences
-                            client.println(
-                                    "<style>html { font-family: Helvetica; display: inline-block; margin: 0px auto; text-align: center;}");
-                            client.println(
-                                    ".button { background-color: #4CAF50; border: none; color: white; padding: 16px 40px;");
-                            client.println("text-decoration: none; font-size: 30px; margin: 2px; cursor: pointer;}");
-                            client.println(".button2 {background-color: #555555;}</style></head>");
+        drawTarget(40, 40);
+        drawTarget(40, 120);
+        drawTarget(40, 200);
+        drawTarget(40, 280);
+        drawTarget(200, 40);
+        drawTarget(200, 120);
+        drawTarget(200, 200);
+        drawTarget(200, 280);
 
-                            // Web Page Heading
-                            client.println("<body><h1>ESP32 Web Server</h1>");
+        sprites.at(random(0,2)).pushSprite(screenBuffers[0], 40, 240, TFT_BLACK);
+        sprites.at(random(2,4)).pushSprite(screenBuffers[0], 136, 240, TFT_BLACK);
 
-                            // Display current state, and ON/OFF buttons for GPIO 26
-                            client.println("<p>GPIO 26 - State " + output26State + "</p>");
-                            // If the output26State is off, it displays the ON button
-                            if (output26State == "off") {
-                                client.println("<p><a href=\"/26/on\"><button class=\"button\">ON</button></a></p>");
-                            } else {
-                                client.println(
-                                        "<p><a href=\"/26/off\"><button class=\"button button2\">OFF</button></a></p>");
-                            }
+        screenBuffers[0]->setCursor(0, 0);
+        screenBuffers[0]->setFont(&fonts::Font4);
+        screenBuffers[0]->setTextColor(0xFFFFFFU);
+        screenBuffers[0]->printf("FPS: %d", fps);
 
-                            // Display current state, and ON/OFF buttons for GPIO 27
-                            client.println("<p>GPIO 27 - State " + output27State + "</p>");
-                            // If the output27State is off, it displays the ON button
-                            if (output27State == "off") {
-                                client.println("<p><a href=\"/27/on\"><button class=\"button\">ON</button></a></p>");
-                            } else {
-                                client.println(
-                                        "<p><a href=\"/27/off\"><button class=\"button button2\">OFF</button></a></p>");
-                            }
-                            client.println("</body></html>");
+        ball.sprite->pushSprite(screenBuffers[0], ball.x, ball.y, TFT_BLACK);
 
-                            // The HTTP response ends with another blank line
-                            client.println();
-                            // Break out of the while loop
-                            break;
-                        } else { // if you got a newline, then clear currentLine
-                            currentLine = "";
-                        }
-                    } else if (c != '\r') {  // if you got anything else but a carriage return character,
-                        currentLine += c;      // add it to the end of the currentLine
-                    }
-                }
-            }
-            // Clear the header variable
-            header = "";
+        screenBuffers[0]->pushSprite(&tft, 0, 0);
 
-            // Close the connection
-            client.stop();
-            Serial.println("Client disconnected.");
-            Serial.println("");
-        }
+        tft.display();
+
+        frames();
+
     }
     catch (std::exception const &e){
-        Serial.println(e.what());
-    }
-
-    lv_timer_handler(); /* let the GUI do its work */
-    delay(5);
-}
-
-int main(){
-    try {
-        setup();
-    }
-    catch (std::exception const &e){
-        Serial.println(e.what());
-    }
-
-    while (1){
-        try {
-            loop();
-        }
-        catch (std::exception const &e){
-            Serial.println(e.what());
-        }
+        tft.print(e.what());
     }
 }
