@@ -2,6 +2,7 @@
 #include <LovyanGFX.hpp>
 #include <Adafruit_NeoPixel.h>
 #include <random>
+#include <map>
 
 class LGFX : public lgfx::LGFX_Device{
     lgfx::Panel_ST7789  _panel_instance;
@@ -46,15 +47,14 @@ static TFT_eSprite *screenBuffers[2] = {&buffer1, &buffer2};
 
 static TFT_eSprite ballSprite;
 
-static const size_t frameCount = 2;
-
 static uint32_t sec, psec;
 static size_t fps = 0, frame_count = 0;
 
 static uint32_t display_width;
 static uint32_t display_height;
 
-std::vector<TFT_eSprite> sprites{4};
+static std::vector<int> objects;
+static std::vector<TFT_eSprite> sprites{4};
 
 void setupPixel(){
     Adafruit_NeoPixel pixels(1, 0, NEO_GRB + NEO_KHZ800);
@@ -71,6 +71,10 @@ void frames(){
         fps = frame_count;
         frame_count = 0;
     }
+    screenBuffers[0]->setCursor(0, 0);
+    screenBuffers[0]->setFont(&fonts::Font4);
+    screenBuffers[0]->setTextColor(0xFFFFFFU);
+    screenBuffers[0]->printf("FPS: %d", fps);
 }
 
 void drawTarget(int x, int y){
@@ -109,27 +113,32 @@ void setup(){
 
         for (int n = 0; n < 4; n++) {
             sprites.at(n).setSwapBytes(true);
-            sprites.at(n).createSprite(flipperL.width, flipperL.height);
-            auto temp = flipperLD;
+            auto buffer = flipperLD;
+            Flipper flipper;
             switch (n) {
                 case 0:
-                    temp = flipperLD;
+                    buffer = flipperLD;
+                    flipper = flipperL;
                     break;
                 case 1:
-                    temp = flipperLU;
+                    buffer = flipperLU;
+                    flipper = flipperL;
                     break;
                 case 2:
-                    temp = flipperRD;
+                    buffer = flipperRD;
+                    flipper = flipperR;
                     break;
                 case 3:
-                    temp = flipperRU;
+                    buffer = flipperRU;
+                    flipper = flipperR;
                     break;
                 default:
-                    temp = flipperLD;
+                    buffer = flipperLD;
+                    flipper = flipperL;
                     break;
             }
-
-            sprites.at(n).pushImage(0, 0, flipperL.width, flipperL.height, temp);
+            sprites.at(n).createSprite(flipper.width, flipper.height);
+            sprites.at(n).pushImage(0, 0, flipper.width, flipper.height, buffer);
         }
 
         tft.startWrite();
@@ -139,40 +148,43 @@ void setup(){
     }
 }
 
+void testingLayout(){
+    drawTarget(display_width >> 1, (display_height >> 1) + (display_height >> 2));
+    drawTarget(display_width >> 1, display_height >> 1);
+    drawTarget(display_width >> 1, display_height >> 2);
+
+    drawTarget(40, 40);
+    drawTarget(40, 120);
+    drawTarget(40, 200);
+    drawTarget(40, 280);
+    drawTarget(200, 40);
+    drawTarget(200, 120);
+    drawTarget(200, 200);
+    drawTarget(200, 280);
+}
+
+int checkCollision(){
+    for (const auto &each : objects){
+        
+    }
+    return 0;
+}
+
 void loop(){
     try {
-        ball.Move();
-
         screenBuffers[0]->clear();
-        drawTarget(display_width >> 1, (display_height >> 1) + (display_height >> 2));
-        drawTarget(display_width >> 1, display_height >> 1);
-        drawTarget(display_width >> 1, display_height >> 2);
+        testingLayout();
 
-        drawTarget(40, 40);
-        drawTarget(40, 120);
-        drawTarget(40, 200);
-        drawTarget(40, 280);
-        drawTarget(200, 40);
-        drawTarget(200, 120);
-        drawTarget(200, 200);
-        drawTarget(200, 280);
+        sprites.at(random(0, 2)).pushSprite(screenBuffers[0], 40, 240, TFT_BLACK);
+        sprites.at(random(2, 4)).pushSprite(screenBuffers[0], 136, 240, TFT_BLACK);
 
-        sprites.at(random(0,2)).pushSprite(screenBuffers[0], 40, 240, TFT_BLACK);
-        sprites.at(random(2,4)).pushSprite(screenBuffers[0], 136, 240, TFT_BLACK);
-
-        screenBuffers[0]->setCursor(0, 0);
-        screenBuffers[0]->setFont(&fonts::Font4);
-        screenBuffers[0]->setTextColor(0xFFFFFFU);
-        screenBuffers[0]->printf("FPS: %d", fps);
-
+        ball.Move(checkCollision());
         ball.sprite->pushSprite(screenBuffers[0], ball.x, ball.y, TFT_BLACK);
-
-        screenBuffers[0]->pushSprite(&tft, 0, 0);
-
-        tft.display();
 
         frames();
 
+        screenBuffers[0]->pushSprite(&tft, 0, 0);
+        tft.display();
     }
     catch (std::exception const &e){
         tft.print(e.what());

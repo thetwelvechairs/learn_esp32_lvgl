@@ -23,7 +23,7 @@ public:
     explicit Ball();
     virtual ~Ball();
 
-    void Move();
+    void Move(int);
 
 };
 
