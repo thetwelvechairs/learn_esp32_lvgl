@@ -268,20 +268,20 @@
  *-----------*/
 
 /*1: Show CPU usage and FPS count*/
-#define LV_USE_PERF_MONITOR 0
+#define LV_USE_PERF_MONITOR 1
 #if LV_USE_PERF_MONITOR
 #define LV_USE_PERF_MONITOR_POS LV_ALIGN_BOTTOM_RIGHT
 #endif
 
 /*1: Show the used memory and the memory fragmentation
  * Requires LV_MEM_CUSTOM = 0*/
-#define LV_USE_MEM_MONITOR 0
+#define LV_USE_MEM_MONITOR 1
 #if LV_USE_MEM_MONITOR
 #define LV_USE_MEM_MONITOR_POS LV_ALIGN_BOTTOM_LEFT
 #endif
 
 /*1: Draw random colored rectangles over the redrawn areas*/
-#define LV_USE_REFR_DEBUG 0
+#define LV_USE_REFR_DEBUG 1
 
 /*Change the built in (v)snprintf functions*/
 #define LV_SPRINTF_CUSTOM 0
@@ -356,7 +356,7 @@
 #define LV_FONT_MONTSERRAT_14 1
 #define LV_FONT_MONTSERRAT_16 0
 #define LV_FONT_MONTSERRAT_18 0
-#define LV_FONT_MONTSERRAT_20 0
+#define LV_FONT_MONTSERRAT_20 1
 #define LV_FONT_MONTSERRAT_22 0
 #define LV_FONT_MONTSERRAT_24 0
 #define LV_FONT_MONTSERRAT_26 0
@@ -511,7 +511,7 @@
 
 #define LV_USE_CALENDAR   1
 #if LV_USE_CALENDAR
-#define LV_CALENDAR_WEEK_STARTS_MONDAY 0
+#define LV_CALENDAR_WEEK_STARTS_MONDAY 1
 #if LV_CALENDAR_WEEK_STARTS_MONDAY
 #define LV_CALENDAR_DEFAULT_DAY_NAMES {"Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"}
 #else
@@ -566,7 +566,7 @@
 #if LV_USE_THEME_DEFAULT
 
 /*0: Light mode; 1: Dark mode*/
-#define LV_THEME_DEFAULT_DARK 1
+#define LV_THEME_DEFAULT_DARK 0
 
 /*1: Enable grow on press*/
 #define LV_THEME_DEFAULT_GROW 1
